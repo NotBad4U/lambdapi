@@ -293,7 +293,36 @@ and typopt oc t = Option.iter (prefix " : " term oc) t
 
 let is_lem x = is_opaq x || is_priv x
 
-let command oc {elt; pos} =
+
+(* let rec proofstep : oc p_proofstep = fun ppf proofstep ->
+  match proofstep with
+  | Tactic({elt; _}, p_subproof) ->
+    tactic ppf elt ; out ppf "%a" subproof p_subproof
+  and
+    tactic = fun ppf tac -> begin match tac with
+    | P_tac_assume xs -> out ppf "intros %a."  param_ids xs
+    | P_tac_admit -> out ppf "admit."
+    | P_tac_simpl _qident -> out ppf "simpl in *." (* ((Option.map_default (fun t -> out ppf " : %a" t)) "" qident) *)
+    | P_tac_apply t -> out ppf "apply %a." term t
+    | P_tac_refine t -> out ppf "refine %a." term t
+    | P_tac_refl -> out ppf "reflexivity."
+    | P_tac_have (pident, t) -> out ppf "assert (%a: %a)." ident pident term t
+    | P_tac_remove ids -> out ppf "clear %a." (List.pp ident " ") ids
+    | P_tac_fail -> out ppf "fail."
+    | P_tac_sym -> out ppf "symmetry."
+    | P_tac_try {elt; _} -> out ppf "try %a." tactic elt
+    | P_tac_rewrite(l2r, _pat,t) -> let oriented = if l2r then "->" else "<-" in
+        out ppf "rewrite %s %a." oriented term t
+    | _ -> assert false
+    end
+  and
+    subproof = fun ppf ->
+      List.iter (fun ps ->  out ppf "{ %a }"  (List.pp proofstep "") ps) *)
+
+(* let proof : oc (p_subproof list)  = fun ppf ->
+  List.iter (out ppf "%a" (List.pp proofstep " ")) *)
+
+  let command oc {elt; pos} =
   begin match elt with
   | P_open ps -> string oc "Import "; list path " " oc ps; string oc ".\n"
   | P_require (true, ps) ->
@@ -305,7 +334,7 @@ let command oc {elt; pos} =
     string oc ".\n"
   | P_symbol
     { p_sym_mod; p_sym_nam; p_sym_arg; p_sym_typ;
-      p_sym_trm; p_sym_prf=_; p_sym_def } ->
+      p_sym_trm ; p_sym_def; _ } ->
       if not (StrSet.mem p_sym_nam.elt !erase) then
         let p_sym_arg =
           if !stt then
@@ -338,6 +367,14 @@ let command oc {elt; pos} =
             string oc "Axiom "; ident oc p_sym_nam; string oc " : forall";
             params_list oc p_sym_arg; string oc ", "; term oc t;
             string oc ".\n"
+          (* | true, None, _, Some (pr, {elt=t1;_} ) -> 
+              begin match t1 with
+              | P_proof_admitted -> wrn pos "HA"
+              | P_proof_abort -> assert false
+              | P_proof_end -> out ppf "Lemma %a%a%a.\nProof. %a Qed.@."
+                ident p_sym_nam params_list p_sym_arg typopt p_sym_typ
+                proof pr
+              end *)
           | _ -> wrn pos "Command not translated."
         end
   | _ -> wrn pos "Command not translated."
