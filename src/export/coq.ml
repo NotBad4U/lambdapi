@@ -294,33 +294,32 @@ and typopt oc t = Option.iter (prefix " : " term oc) t
 let is_lem x = is_opaq x || is_priv x
 
 
-(* let rec proofstep : oc p_proofstep = fun ppf proofstep ->
-  match proofstep with
-  | Tactic({elt; _}, p_subproof) ->
-    tactic ppf elt ; out ppf "%a" subproof p_subproof
+let rec proofstep oc prstep =
+  match prstep with
+  | Tactic({elt; _}, subproofs) ->
+    tactic oc elt ; string oc ".\n"; List.iter (subproof oc) subproofs
   and
-    tactic = fun ppf tac -> begin match tac with
-    | P_tac_assume xs -> out ppf "intros %a."  param_ids xs
-    | P_tac_admit -> out ppf "admit."
-    | P_tac_simpl _qident -> out ppf "simpl in *." (* ((Option.map_default (fun t -> out ppf " : %a" t)) "" qident) *)
-    | P_tac_apply t -> out ppf "apply %a." term t
-    | P_tac_refine t -> out ppf "refine %a." term t
-    | P_tac_refl -> out ppf "reflexivity."
-    | P_tac_have (pident, t) -> out ppf "assert (%a: %a)." ident pident term t
-    | P_tac_remove ids -> out ppf "clear %a." (List.pp ident " ") ids
-    | P_tac_fail -> out ppf "fail."
-    | P_tac_sym -> out ppf "symmetry."
-    | P_tac_try {elt; _} -> out ppf "try %a." tactic elt
+    tactic oc tac = begin match tac with
+    | P_tac_assume ids -> string oc "intros "; param_ids oc ids
+    | P_tac_admit -> string oc "admit"
+    | P_tac_simpl _qident -> string oc "simpl in *" (* ((Option.map_default (fun t -> out ppf " : %a" t)) "" qident) *)
+    | P_tac_apply t -> string oc "apply " ; term oc t
+    | P_tac_refine t -> string oc "refine " ; term oc t
+    | P_tac_refl -> string oc "reflexivity"
+    | P_tac_have (pident, t) -> string oc "assert " ; char oc '('; ident oc pident; string oc " : " ; term oc t ; char oc ')'
+    | P_tac_remove ids ->  string oc "clear"; list (fun oc id -> string oc id.elt) " " oc ids
+    | P_tac_fail -> string oc "fail"
+    | P_tac_sym -> string oc "symmetry"
+    | P_tac_try {elt; _} -> string oc "try "; tactic oc elt
     | P_tac_rewrite(l2r, _pat,t) -> let oriented = if l2r then "->" else "<-" in
-        out ppf "rewrite %s %a." oriented term t
+        string oc "rewrite " ; string oc oriented ;  term oc t
     | _ -> assert false
     end
   and
-    subproof = fun ppf ->
-      List.iter (fun ps ->  out ppf "{ %a }"  (List.pp proofstep "") ps) *)
+    subproof oc sp = 
+      string oc "{\n" ;  List.iter (proofstep oc) sp ; string oc "}\n"
 
-(* let proof : oc (p_subproof list)  = fun ppf ->
-  List.iter (out ppf "%a" (List.pp proofstep " ")) *)
+let proof oc proof =  List.iter (fun sp ->  subproof oc sp) proof
 
   let command oc {elt; pos} =
   begin match elt with
@@ -334,7 +333,7 @@ let is_lem x = is_opaq x || is_priv x
     string oc ".\n"
   | P_symbol
     { p_sym_mod; p_sym_nam; p_sym_arg; p_sym_typ;
-      p_sym_trm ; p_sym_def; _ } ->
+      p_sym_trm ; p_sym_def; p_sym_prf } ->
       if not (StrSet.mem p_sym_nam.elt !erase) then
         let p_sym_arg =
           if !stt then
@@ -345,36 +344,37 @@ let is_lem x = is_opaq x || is_priv x
               p_sym_arg
           else p_sym_arg
         in
-        begin match p_sym_def, p_sym_trm, p_sym_arg, p_sym_typ with
-          | true, Some t, _, Some a when List.exists is_lem p_sym_mod ->
+        begin match p_sym_def, p_sym_trm, p_sym_arg, p_sym_typ, p_sym_prf with
+          | true, Some t, _, Some a, _ when List.exists is_lem p_sym_mod ->
             (* If they have a type, opaque or private defined symbols are
                translated as Lemma's so that their definition is loaded in
                memory only when it is necessary. *)
-            string oc "Lemma "; ident oc p_sym_nam; params_list oc p_sym_arg;
+            string oc "Lemma "; ident oc p_sym_nam ; params_list oc p_sym_arg;
             string oc " : "; term oc a; string oc ".\nProof. exact (";
             term oc t; string oc "). Qed.\n"
-          | true, Some t, _, _ ->
+          | true, Some t, _, _ , _ ->
             string oc "Definition "; ident oc p_sym_nam;
             params_list oc p_sym_arg; typopt oc p_sym_typ;
             string oc " := "; term oc t;
             if List.exists is_opaq p_sym_mod then
               (string oc ".\nOpaque "; ident oc p_sym_nam);
             string oc ".\n"
-          | false, _, [], Some t ->
+          | false, _, [], Some t, _ ->
             string oc "Axiom "; ident oc p_sym_nam; string oc " : ";
             term oc t; string oc ".\n"
-          | false, _, _, Some t ->
+          | false, _, _, Some t, _ ->
             string oc "Axiom "; ident oc p_sym_nam; string oc " : forall";
             params_list oc p_sym_arg; string oc ", "; term oc t;
             string oc ".\n"
-          (* | true, None, _, Some (pr, {elt=t1;_} ) -> 
+          | true, None, _, Some t, Some (pr, {elt=t1;_} ) -> 
+              string oc "Lemma ";  ident oc p_sym_nam; string oc " : ";
+              string oc "forall " ; params_list oc p_sym_arg; string oc ", "; term oc t; string oc ".\nProof.\n";
+              proof oc pr ; 
               begin match t1 with
-              | P_proof_admitted -> wrn pos "HA"
-              | P_proof_abort -> assert false
-              | P_proof_end -> out ppf "Lemma %a%a%a.\nProof. %a Qed.@."
-                ident p_sym_nam params_list p_sym_arg typopt p_sym_typ
-                proof pr
-              end *)
+              | P_proof_admitted -> string oc "Admitted.\n"
+              | P_proof_abort -> string oc "Abort.\n"
+              |  P_proof_end -> string oc "Qed.\n"
+              end
           | _ -> wrn pos "Command not translated."
         end
   | _ -> wrn pos "Command not translated."
