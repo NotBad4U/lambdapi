@@ -57,7 +57,7 @@ opaque symbol foo2 [a] (x: El a) : Prf (x = x) ≔ begin
         apply trivial;
     };
     reflexivity;
-    proofterm;
+    //proofterm;
 end;
 
 
