@@ -16,3 +16,8 @@ builtin "~" ≔ ¬;
 builtin "all" ≔ ∀;
 builtin "ex" ≔ ∃;
 builtin "=" ≔ =;
+builtin "<->" ≔ ⇔;
+builtin "imp" ≔ ⇒;
+builtin "<>" ≔ ≠;
+builtin "bool" ≔ bool;
+builtin "bool" ≔ 𝔹;

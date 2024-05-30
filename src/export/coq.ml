@@ -294,32 +294,37 @@ and typopt oc t = Option.iter (prefix " : " term oc) t
 let is_lem x = is_opaq x || is_priv x
 
 
-let rec proofstep oc prstep =
+let rec proofstep oc depth prstep  =
   match prstep with
   | Tactic({elt; _}, subproofs) ->
-    tactic oc elt ; string oc ".\n"; List.iter (subproof oc) subproofs
+  string oc (String.make (depth * 2) ' ') ;  tactic oc elt ; string oc ".\n"; List.iter (subproof oc (depth+1)) subproofs
   and
     tactic oc tac = begin match tac with
     | P_tac_assume ids -> string oc "intros "; param_ids oc ids
     | P_tac_admit -> string oc "admit"
     | P_tac_simpl _qident -> string oc "simpl in *" (* ((Option.map_default (fun t -> out ppf " : %a" t)) "" qident) *)
-    | P_tac_apply t -> string oc "apply " ; term oc t
-    | P_tac_refine t -> string oc "refine " ; term oc t
+    | P_tac_apply t -> string oc "apply " ; paren oc t
+    | P_tac_refine t -> string oc "refine " ; paren oc t
     | P_tac_refl -> string oc "reflexivity"
     | P_tac_have (pident, t) -> string oc "assert " ; char oc '('; ident oc pident; string oc " : " ; term oc t ; char oc ')'
     | P_tac_remove ids ->  string oc "clear"; list (fun oc id -> string oc id.elt) " " oc ids
     | P_tac_fail -> string oc "fail"
     | P_tac_sym -> string oc "symmetry"
     | P_tac_try {elt; _} -> string oc "try "; tactic oc elt
-    | P_tac_rewrite(l2r, _pat,t) -> let oriented = if l2r then "->" else "<-" in
+    | P_tac_rewrite(l2r, _pat,t) -> let oriented = if l2r then "-> " else "<- " in
         string oc "rewrite " ; string oc oriented ;  term oc t
+    | P_tac_induction -> string oc "lpinduction"
     | _ -> assert false
     end
   and
-    subproof oc sp = 
-      string oc "{\n" ;  List.iter (proofstep oc) sp ; string oc "}\n"
+    subproof oc depth sp = 
+    string oc (String.make ((depth-1) * 2) ' '); 
+    string oc "{\n" ;
+    List.iter (proofstep oc depth) sp ;
+    string oc (String.make ((depth-1) * 2) ' ') ; 
+    string oc "}\n"
 
-let proof oc proof =  List.iter (fun sp ->  subproof oc sp) proof
+let proof oc proof =  List.iter (fun sp ->  List.iter (proofstep oc 1) sp) proof
 
   let command oc {elt; pos} =
   begin match elt with
@@ -373,7 +378,7 @@ let proof oc proof =  List.iter (fun sp ->  subproof oc sp) proof
               begin match t1 with
               | P_proof_admitted -> string oc "Admitted.\n"
               | P_proof_abort -> string oc "Abort.\n"
-              |  P_proof_end -> string oc "Qed.\n"
+              |  P_proof_end -> string oc "Qed.\n\n"
               end
           | _ -> wrn pos "Command not translated."
         end
