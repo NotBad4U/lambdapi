@@ -14,4 +14,13 @@ builtin "iff_trans" ≔ ⇔_trans;
 builtin "proj1" ≔ ₁;
 builtin "proj2" ≔ ₂;
 builtin "product" ≔ ×;
-
+builtin "Exist_i" ≔ ∃ᵢ;
+builtin "Exist_e" ≔ ∃ₑ;
+builtin "false_neq_true" ≔ false≠true;
+builtin "true_neq_false" ≔ true≠false;
+builtin "Or_istrue" ≔ ∨_istrue;
+builtin "And_istrue" ≔ ∧_istrue;
+builtin "if_lp" ≔ if;
+builtin "orb" ≔ or;
+builtin "andb" ≔ and;
+builtin "Is_true" ≔ istrue;

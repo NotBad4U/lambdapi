@@ -72,16 +72,16 @@ end;
 
 debug +t;
 
-opaque symbol ⇔_trans (p q r: Prop) : π (p ⇔ q) → π (q ⇔ r) → π (p ⇔ r) ≔
-begin
-  assume p q r epq eqr; apply ∧ᵢ
-    {
-        assume hp;
-        apply ∧ₑ₁ eqr _;
-        apply ∧ₑ₁ epq hp;
-    }
-    { assume hr; apply ∧ₑ₂ epq _; apply ∧ₑ₂ eqr hr };
-end;
+// opaque symbol ⇔_trans (p q r: Prop) : π (p ⇔ q) → π (q ⇔ r) → π (p ⇔ r) ≔
+// begin
+//   assume p q r epq eqr; apply ∧ᵢ
+//     {
+//         assume hp;
+//         apply (∧ₑ₁ eqr) _;
+//         apply ∧ₑ₁ epq hp;
+//     }
+//     { assume hr; apply ∧ₑ₂ epq _; apply ∧ₑ₂ eqr hr };
+// end;
 
 // Set ====================================
 
@@ -102,18 +102,18 @@ constant symbol × : Set → Set → Set; notation × infix right 10; // \times
 
 assert a b c ⊢ a × b × c ≡ a × (b × c);
 
-symbol & [a b] : τ a → τ b → τ (a × b); notation & infix right 30;
+symbol R [a b] : τ a → τ b → τ (a × b); notation R infix right 30;
 
-assert a (x:τ a) b (y:τ b) c (z:τ c) ⊢ x & y & z : τ(a × b × c);
-assert x y z ⊢ x & y & z ≡ x & (y & z);
+assert a (x:τ a) b (y:τ b) c (z:τ c) ⊢ x R y R z : τ(a × b × c);
+assert x y z ⊢ x R y R z ≡ x R (y R z);
 
 symbol ₁ [a b] : τ(a × b) → τ a; notation ₁ postfix 10;
 
-rule ($x & _)₁ ↪ $x;
+rule ($x R _)₁ ↪ $x;
 
 symbol ₂ [a b] : τ(a × b) → τ b; notation ₂ postfix 10;
 
-rule (_ & $x)₂ ↪ $x;
+rule (_ R $x)₂ ↪ $x;
 
 constant symbol = [a] : τ a → τ a → Prop;
 
@@ -153,12 +153,12 @@ rule π (∀ $f) ↪ Π x, π ($f x);
 
 // Existential quantification
 
-constant symbol ∃ [a] : (τ a → Prop) → Prop; notation ∃ quantifier; // ?? or \exists
+// constant symbol ∃ [a] : (τ a → Prop) → Prop; notation ∃ quantifier; // ?? or \exists
 
-constant symbol ∃ᵢ [a] p (x:τ a) : π (p x) → π (∃ p);
-symbol ∃ₑ [a] p : π (∃ p) → Π q, (Π x:τ a, π (p x) → π q) → π q;
+// constant symbol ∃ᵢ [a] p (x:τ a) : π (p x) → π (∃ p);
+// symbol ∃ₑ [a] p : π (∃ p) → Π q, (Π x:τ a, π (p x) → π q) → π q;
 
-rule ∃ₑ _ (∃ᵢ _ $x $px) _ $f ↪ $f $x $px;
+// rule ∃ₑ _ (∃ᵢ _ $x $px) _ $f ↪ $f $x $px;
 
 
 // ===========================
@@ -193,17 +193,16 @@ symbol istrue : 𝔹 → Prop;
 rule istrue true ↪ ⊤
 with istrue false ↪ ⊥;
 
-opaque symbol false≠true : π (false ≠ true) ≔
-begin
-  assume h;
-  type (ind_eq h );
-  refine ind_eq h istrue top
-end;
+// opaque symbol false≠true : π (false ≠ true) ≔
+// begin
+//   assume h;
+//   refine ind_eq h istrue top
+// end;
 
-opaque symbol true≠false : π (true ≠ false) ≔
-begin
-  assume h; apply false≠true; symmetry; apply h
-end;
+// opaque symbol true≠false : π (true ≠ false) ≔
+// begin
+//   assume h; apply false≠true; symmetry; apply h
+// end;
 
 // not
 
@@ -221,35 +220,35 @@ with _     or true  ↪ true
 with false or $b    ↪ $b
 with $b    or false ↪ $b;
 
-opaque symbol ∨_istrue [p q] : π(istrue(p or q)) → π(istrue p ∨ istrue q) ≔
+opaque symbol ∨_istrue [p q: τ bool] : π(istrue(p or q)) → π(istrue p ∨ istrue q) ≔
 begin
   induction
   { assume q h; apply ∨ᵢ₁; apply top; }
   { assume q h; apply ∨ᵢ₂; apply h; }
 end;
 
-opaque symbol istrue_or [p q] : π(istrue p ∨ istrue q) → π(istrue(p or q)) ≔
+opaque symbol istrue_or [p q: τ bool] : π(istrue p ∨ istrue q) → π(istrue(p or q)) ≔
 begin
   induction
   { assume q h; apply top; }
   { assume q h; apply ∨ₑ h { assume i; apply ⊥ₑ i; } { assume i; apply i; } }
 end;
 
-opaque symbol orᵢ₁ [p] q : π (istrue p) → π (istrue (p or q)) ≔
+opaque symbol orᵢ₁ [p: τ bool] (q: τ bool) : π (istrue p) → π (istrue (p or q)) ≔
 begin
   induction
   { simplify; assume b h; apply top }
   { simplify; assume b h; apply ⊥ₑ h }
 end;
 
-opaque symbol orᵢ₂ p [q] : π (istrue q) → π (istrue (p or q)) ≔
+opaque symbol orᵢ₂ (p: τ bool) [q: τ bool] : π (istrue q) → π (istrue (p or q)) ≔
 begin
   induction
   { simplify; assume b h; apply top }
   { simplify; assume b h; apply h }
 end;
 
-opaque symbol orₑ [p q] r : π(istrue(p or q)) →
+opaque symbol orₑ [p q: τ bool] (r: τ bool) : π(istrue(p or q)) →
   (π(istrue p) → π(istrue r)) → (π(istrue q) → π(istrue r)) → π(istrue r) ≔
 begin
   assume p q r pq pr qr;
@@ -257,17 +256,18 @@ begin
   apply ∨ₑ h pr qr;
 end;
 
-opaque symbol orC p q : π (p or q = q or p) ≔
+opaque symbol orC [p q: τ bool] : π ((p or q) = (q or p)) ≔
 begin
     induction
-    { reflexivity; }
-    { reflexivity; }
+    { simplify; reflexivity; }
+    { reflexivity; };
+    proofterm;
 end;
 
-opaque symbol orA p q r : π ((p or q) or r = p or (q or r)) ≔
+opaque symbol orA [p q r: τ bool] : π ((p or q) or r = p or (q or r)) ≔
 begin
     induction
-    { reflexivity; }
+    { simplify; reflexivity; }
     { reflexivity; }
 end;
 
@@ -280,7 +280,7 @@ with $b    and true  ↪ $b
 with false and _     ↪ false
 with _     and false ↪ false;
 
-opaque symbol ∧_istrue [p q] : π(istrue (p and q)) → π(istrue p ∧ istrue q) ≔
+opaque symbol ∧_istrue [p q: τ bool] : π(istrue (p and q)) → π(istrue p ∧ istrue q) ≔
 begin
   induction
   { induction
@@ -290,27 +290,27 @@ begin
   { assume q h; apply ⊥ₑ h; }
 end;
 
-opaque symbol istrue_and [p q] : π(istrue p ∧ istrue q) → π(istrue (p and q)) ≔
+opaque symbol istrue_and [p q: τ bool] : π(istrue p ∧ istrue q) → π(istrue (p and q)) ≔
 begin
   induction
   { assume q h; apply ∧ₑ₂ h; }
   { assume q h; apply ∧ₑ₁ h; }
 end;
 
-opaque symbol andᵢ [p q] : π(istrue p) → π(istrue q) → π(istrue (p and q)) ≔
+opaque symbol andᵢ [p q: τ bool] : π(istrue p) → π(istrue q) → π(istrue (p and q)) ≔
 begin
   assume p q h i; //FIXME: apply istrue_and fails
   apply @istrue_and p q; apply ∧ᵢ h i;
 end;
 
-opaque symbol andₑ₁ [p q] : π (istrue (p and q)) → π (istrue p) ≔
+opaque symbol andₑ₁ [p q: τ bool] : π (istrue (p and q)) → π (istrue p) ≔
 begin
   induction
   { assume q i; apply top; }
   { assume q i; apply i; }
 end;
 
-opaque symbol andₑ₂ [p q] : π (istrue (p and q)) → π (istrue q) ≔
+opaque symbol andₑ₂ [p q: τ bool] : π (istrue (p and q)) → π (istrue q) ≔
 begin
   induction
   { assume q i; apply i; }

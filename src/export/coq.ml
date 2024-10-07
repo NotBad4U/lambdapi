@@ -314,6 +314,7 @@ let rec proofstep oc depth prstep  =
     | P_tac_rewrite(l2r, _pat,t) -> let oriented = if l2r then "-> " else "<- " in
         string oc "rewrite " ; string oc oriented ;  term oc t
     | P_tac_induction -> string oc "lpinduction"
+    | P_tac_query _  -> ()
     | _ -> assert false
     end
   and
@@ -382,6 +383,15 @@ let proof oc proof =  List.iter (fun sp ->  List.iter (proofstep oc 1) sp) proof
               end
           | _ -> wrn pos "Command not translated."
         end
+  | P_notation (pqident, notation) -> if QidMap.mem pqident.elt !map_erased_qid_coq then string oc ""
+      else
+        let {elt=t1;_} = pqident in 
+        let op = snd t1 in 
+          begin match notation with
+          | Infix(Left, _level) -> string oc "Infix " ; out " \"%s\" " (translate_ident op) ; string oc " := "; string oc (translate_ident op);  string oc " (at level 80, left associativity).\n"
+          | Infix(Right, _level) -> string oc "Infix " ; out " \"%s\" " (translate_ident op) ; string oc " := "; string oc (translate_ident op);  string oc " (at level 80, right associativity).\n"
+          | _ -> wrn pos "Notation not supported."
+      end
   | _ -> wrn pos "Command not translated."
   end
 
@@ -401,4 +411,5 @@ let print : ast -> unit = fun s ->
       string oc (Filename.chop_extension f); string oc ".\n"
   | None -> ()
   end;
+  string oc "Require Import Coq.Bool.Bool.\n";
   ast oc s
