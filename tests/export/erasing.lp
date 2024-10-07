@@ -21,3 +21,8 @@ builtin "imp" ≔ ⇒;
 builtin "<>" ≔ ≠;
 builtin "bool" ≔ bool;
 builtin "bool" ≔ 𝔹;
+builtin "Is_true" ≔ istrue;
+builtin "orb" ≔ or;
+builtin "andb" ≔ and;
+builtin "I" ≔ top;
+builtin "False_ind" ≔ bot_elim;
