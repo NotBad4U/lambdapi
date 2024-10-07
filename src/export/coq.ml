@@ -207,7 +207,9 @@ let rec term oc t =
     log "pp %a" (*Pos.short t.pos*) Pretty.term t;*)
   match t.elt with
   | P_Meta _ -> wrn t.pos "TODO"; assert false
-  | P_Patt _ -> wrn t.pos "TODO"; assert false
+  | P_Patt (pident, p_terms) ->
+    Option.iter (fun  {elt;_} -> string oc elt ) pident ;
+    Option.iter (fun  terms ->   wrn t.pos "%d" (Array.length terms) ; Array.iter (term oc) terms ) p_terms
   | P_Expl _ -> wrn t.pos "TODO"; assert false
   | P_Type -> string oc "Type"
   | P_Wild -> char oc '_'
@@ -327,6 +329,9 @@ let rec proofstep oc depth prstep  =
 
 let proof oc proof =  List.iter (fun sp ->  List.iter (proofstep oc 1) sp) proof
 
+(* Counter for rule name to avoid collision *)
+let counterRule = ref 0
+
   let command oc {elt; pos} =
   begin match elt with
   | P_open ps -> string oc "Import "; list path " " oc ps; string oc ".\n"
@@ -366,7 +371,7 @@ let proof oc proof =  List.iter (fun sp ->  List.iter (proofstep oc 1) sp) proof
               (string oc ".\nOpaque "; ident oc p_sym_nam);
             string oc ".\n"
           | false, _, [], Some t, _ ->
-            string oc "Axiom "; ident oc p_sym_nam; string oc " : ";
+            string oc "Symbol "; ident oc p_sym_nam; string oc " : ";
             term oc t; string oc ".\n"
           | false, _, _, Some t, _ ->
             string oc "Axiom "; ident oc p_sym_nam; string oc " : forall";
@@ -392,6 +397,9 @@ let proof oc proof =  List.iter (fun sp ->  List.iter (proofstep oc 1) sp) proof
           | Infix(Right, _level) -> string oc "Infix " ; out " \"%s\" " (translate_ident op) ; string oc " := "; string oc (translate_ident op);  string oc " (at level 80, right associativity).\n"
           | _ -> wrn pos "Notation not supported."
       end
+  | P_rules rules ->
+      string oc "Rewrite Rule " ;  out "rule%d" (!counterRule); counterRule := (!counterRule) + 1 ;  string oc " :=\n" ; 
+      List.iter (fun {elt=(l, r);_} -> string oc "| "; term oc l ; string oc " => " ; term oc r ; string oc "\n") rules; string oc ".\n\n"
   | _ -> wrn pos "Command not translated."
   end
 
